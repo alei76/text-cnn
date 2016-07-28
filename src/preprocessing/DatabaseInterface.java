@@ -3,7 +3,6 @@ package preprocessing;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
@@ -12,25 +11,21 @@ import org.apache.commons.csv.*;
 
 public class DatabaseInterface {
 
-	private File f;
 	private File sentences;
+	private CSVParser p;
+	private Iterator<CSVRecord> iter;
 	
-	public DatabaseInterface(File f){
-		this.f = f;
+	public DatabaseInterface(File f) throws IOException{
+		p = CSVParser.parse(f, 
+				StandardCharsets.UTF_8, 
+				CSVFormat.TDF.withHeader().withQuote(null));
+		iter = p.iterator();
 	}
 	
-	public void writeSenteceFile(String[] columns) throws IOException{
+	public void writeSenteceFile(String[] columns) throws Exception{
 		sentences = new File("sentences.temp");
 		PrintWriter writer;
-		try {
-			writer = new PrintWriter(sentences, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			writer = new PrintWriter(sentences);
-		}
-		
-		CSVParser p = CSVParser.parse(f, StandardCharsets.UTF_8, CSVFormat.TDF.withHeader().withQuote(null));
-		System.out.println(p.getHeaderMap());
-		Iterator<CSVRecord> iter = p.iterator();
+		writer = new PrintWriter(sentences, "UTF-8");
 		
 		while(iter.hasNext()){
 			CSVRecord r = iter.next();
