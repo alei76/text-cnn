@@ -11,21 +11,63 @@ import org.apache.commons.csv.*;
 
 public class DatabaseInterface {
 
-	private File sentences;
+	private File sentences, db;
 	private CSVParser p;
-	private Iterator<CSVRecord> iter;
+	private String[] columns;
+	private String labelColumn;
+	private int size;
 	
-	public DatabaseInterface(File f) throws IOException{
-		p = CSVParser.parse(f, 
+	Iterator<CSVRecord> iter;
+	CSVRecord currentRecord;
+	
+	public DatabaseInterface(File f, String[] columns, String labelColumn) throws IOException{
+		this.db = f;
+		this.columns = columns;
+		this.labelColumn = labelColumn;
+		size = 0;
+		newParser();
+		while (iter.hasNext()){
+			size++;
+			iter.next();
+		}
+		newParser();
+	}
+	
+	private void newParser() throws IOException {
+		p = CSVParser.parse(db, 
 				StandardCharsets.UTF_8, 
 				CSVFormat.TDF.withHeader().withQuote(null));
 		iter = p.iterator();
 	}
+
+	public String getNextEntry() throws IOException {
+		String s = "";
+		if (iter.hasNext()){
+			currentRecord = iter.next();
+			for (String c : columns){
+				s = s + " " + StringProcessor.stringForCNN(currentRecord.get(c));
+			}
+		} else {
+			throw new IOException();
+		}
+		return s;
+	}
+	
+	public int getCurrentLabel(){ 
+		String s = currentRecord.get(labelColumn);
+		
+		if (s.equals("false")) {
+			return 0;
+		} else if (s.equals("true")) {
+			return 1;
+		}
+		
+		return Integer.parseInt(s);
+	}
 	
 	public void writeSenteceFile(String[] columns) throws Exception{
 		sentences = new File("sentences.temp");
-		PrintWriter writer;
-		writer = new PrintWriter(sentences, "UTF-8");
+		PrintWriter writer = new PrintWriter(sentences, "UTF-8");
 		
 		while(iter.hasNext()){
 			CSVRecord r = iter.next();
@@ -35,6 +77,7 @@ public class DatabaseInterface {
         }
 		
 		writer.close();
+		newParser();
 	}
 
 	public File getSentenceFile(){
@@ -44,5 +87,9 @@ public class DatabaseInterface {
 	public void removeSentenceFile(){
 		sentences.delete();
 	}
-	
+
+	public int size() {
+		return size;
+	}
+
 }

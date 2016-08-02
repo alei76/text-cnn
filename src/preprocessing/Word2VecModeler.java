@@ -20,8 +20,15 @@ public class Word2VecModeler {
 		TokenizerFactory t = new DefaultTokenizerFactory();
 		t.setTokenPreProcessor(new CommonPreprocessor());
 
-		vec = new Word2Vec.Builder().minWordFrequency(5).iterations(1).layerSize(100).seed(42).windowSize(5)
-				.iterate(iter).tokenizerFactory(t).build();
+		vec = new Word2Vec.Builder()
+				.minWordFrequency(5)
+				.iterations(1)
+				.layerSize(100)
+				.seed(42)
+				.windowSize(5)
+				.iterate(iter)
+				.tokenizerFactory(t)
+				.build();
 
 		vec.fit();
 	}

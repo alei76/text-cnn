@@ -4,7 +4,13 @@ public class StringProcessor {
 
 	static public String stringToSentences(String string) {
 		string = seperatePunctuation(string);
-		string = newlineSentences(string);
+		//string = newlineSentences(string);
+		return string;
+	}
+	
+	static public String stringForCNN(String string) {
+		string = seperatePunctuation(string);
+		//string = newlineSentences(string);
 		return string;
 	}
 
