@@ -1,7 +1,5 @@
 package train;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.deeplearning4j.datasets.iterator.DataSetIterator;
 import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import org.deeplearning4j.text.tokenization.tokenizer.preprocessor.CommonPreprocessor;
@@ -22,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+@SuppressWarnings("serial")
 public class EntryIterator implements DataSetIterator {
 	private final WordVectors wordVectors;
 	private final int batchSize;
@@ -34,7 +33,7 @@ public class EntryIterator implements DataSetIterator {
 	private final TokenizerFactory tokenizerFactory;
 
 	public EntryIterator(DatabaseInterface databaseInterface, int numLabels, WordVectors wordVectors, int batchSize,
-			int truncateLength, boolean train) throws IOException {
+			int truncateLength) throws IOException {
 		this.batchSize = batchSize;
 		this.vectorSize = wordVectors.lookupTable().layerSize();
 
@@ -60,6 +59,7 @@ public class EntryIterator implements DataSetIterator {
 	}
 
 	private DataSet nextDataSet(int num) throws IOException {
+//		System.out.println(cursor);
 		// First: load reviews to String. Alternate positive and negative
 		// reviews
 		List<String> texts = new ArrayList<>(num);
@@ -84,13 +84,11 @@ public class EntryIterator implements DataSetIterator {
 		}
 
 		// Create data for training
-		// Here: we have texts.size() examples of varying lengths, 1 is the
-		// channels
+		// Here: we have texts.size() examples of varying lengths
 		// Features have to be 2dim array for cnn to work: batchsize, vectorsize
 		// x numWords
 		INDArray features = Nd4j.create(texts.size(), vectorSize * truncateLength);
-		INDArray labels = Nd4j.create(texts.size(), numLabels); // Number of
-																// Labels
+		INDArray labels = Nd4j.create(texts.size(), numLabels); 
 
 		for (int i = 0; i < texts.size(); i++) {
 			List<String> tokens = allTokens.get(i);
@@ -125,12 +123,17 @@ public class EntryIterator implements DataSetIterator {
 
 	@Override
 	public int totalOutcomes() {
-		return 2;
+		return numLabels;
 	}
 
 	@Override
 	public void reset() {
 		cursor = 0;
+		try {
+			databaseInterface.newParser();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -160,7 +163,7 @@ public class EntryIterator implements DataSetIterator {
 
 	@Override
 	public boolean hasNext() {
-		return cursor < numExamples();
+		return cursor < (numExamples() - batchSize);
 	}
 
 	@Override

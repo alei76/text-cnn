@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 import org.apache.commons.csv.*;
-
+import preprocessing.StringProcessor;
 
 public class DatabaseInterface {
 
@@ -30,10 +30,11 @@ public class DatabaseInterface {
 			size++;
 			iter.next();
 		}
+//		System.out.println(size);
 		newParser();
 	}
 	
-	private void newParser() throws IOException {
+	public void newParser() throws IOException {
 		p = CSVParser.parse(db, 
 				StandardCharsets.UTF_8, 
 				CSVFormat.TDF.withHeader().withQuote(null));
