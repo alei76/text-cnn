@@ -13,17 +13,17 @@ public class KFoldIterator implements DataSetIterator {
 	private final int folds, iteration;
 	private final int lowerBound, upperBound;
 	private final boolean train;
-	
+
 	private int cursor;
 
 	public KFoldIterator(DataSetIterator iter, int folds, int iteration, boolean train) throws IOException {
 		this.iter = iter;
 		iter.reset();
-		
+
 		this.train = train;
 		this.folds = folds;
 		this.iteration = iteration;
-		
+
 		int range = iter.numExamples();
 		lowerBound = iteration * range / folds;
 		upperBound = (iteration + 1) * range / folds;
@@ -34,15 +34,17 @@ public class KFoldIterator implements DataSetIterator {
 	public DataSet next(int num) {
 		if (train) {
 			while (cursor > lowerBound && cursor < upperBound) {
-				iter.next(num);
 				cursor += num;
+				iter.next(num);
 			}
+			cursor += num;
 			return iter.next(num);
 		} else {
 			while (cursor < lowerBound) {
-				iter.next(num);
 				cursor += num;
+				iter.next(num);
 			}
+			cursor += num;
 			return iter.next(num);
 		}
 	}
@@ -98,9 +100,11 @@ public class KFoldIterator implements DataSetIterator {
 
 	@Override
 	public boolean hasNext() {
-		return iter.hasNext() && 
-				!(train && cursor > lowerBound && folds == iteration + 1) &&
-				!(!train && cursor + iter.batch() > upperBound);
+		return iter.hasNext() 
+				// skip last elements if training and last iteration
+				&& !(train && cursor > lowerBound && folds == iteration + 1)
+				// stop if testing is done
+				&& !(!train && cursor > upperBound);
 	}
 
 	@Override

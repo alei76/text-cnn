@@ -59,7 +59,7 @@ public class EntryIterator implements DataSetIterator {
 	}
 
 	private DataSet nextDataSet(int num) throws IOException {
-//		System.out.println(cursor);
+		// System.out.println(cursor);
 		// First: load reviews to String. Alternate positive and negative
 		// reviews
 		List<String> texts = new ArrayList<>(num);
@@ -88,7 +88,7 @@ public class EntryIterator implements DataSetIterator {
 		// Features have to be 2dim array for cnn to work: batchsize, vectorsize
 		// x numWords
 		INDArray features = Nd4j.create(texts.size(), vectorSize * truncateLength);
-		INDArray labels = Nd4j.create(texts.size(), numLabels); 
+		INDArray labels = Nd4j.create(texts.size(), numLabels);
 
 		for (int i = 0; i < texts.size(); i++) {
 			List<String> tokens = allTokens.get(i);
@@ -97,10 +97,8 @@ public class EntryIterator implements DataSetIterator {
 			for (int j = 0; j < tokens.size() && j < truncateLength; j++) {
 				String token = tokens.get(j);
 				INDArray vector = wordVectors.getWordVectorMatrix(token);
-				features.put(new INDArrayIndex[] { 
-						NDArrayIndex.point(i),
-						NDArrayIndex.interval(j * vectorSize, (j + 1) * vectorSize) }, 
-						vector);
+				features.put(new INDArrayIndex[] { NDArrayIndex.point(i),
+						NDArrayIndex.interval(j * vectorSize, (j + 1) * vectorSize) }, vector);
 			}
 
 			int idx = label[i];
