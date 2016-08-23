@@ -18,7 +18,7 @@ public class CNN {
 	
 	private MultiLayerNetwork model;
 	
-	public CNN( int numClasses, int vectorLength, int textLength){
+	public CNN(int numClasses, int vectorLength, int textLength){
 		int nChannels = 1;
         int iterations = 1;
         int seed = 42;
@@ -65,7 +65,7 @@ public class CNN {
         MultiLayerConfiguration conf = builder.build();
         model = new MultiLayerNetwork(conf);
         model.init();
-        model.setListeners(new ScoreIterationListener(1));
+        model.setListeners(new ScoreIterationListener(100));
 	}
 	
 	public MultiLayerNetwork getModel(){

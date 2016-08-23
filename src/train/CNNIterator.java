@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @SuppressWarnings("serial")
-public class EntryIterator implements DataSetIterator {
+public class CNNIterator implements DataSetIterator {
 	private final WordVectors wordVectors;
 	private final int batchSize;
 	private final int vectorSize;
@@ -32,7 +32,7 @@ public class EntryIterator implements DataSetIterator {
 	private final DatabaseInterface databaseInterface;
 	private final TokenizerFactory tokenizerFactory;
 
-	public EntryIterator(DatabaseInterface databaseInterface, int numLabels, WordVectors wordVectors, int batchSize,
+	public CNNIterator(DatabaseInterface databaseInterface, int numLabels, WordVectors wordVectors, int batchSize,
 			int truncateLength) throws IOException {
 		this.batchSize = batchSize;
 		this.vectorSize = wordVectors.lookupTable().layerSize();

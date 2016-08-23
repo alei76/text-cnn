@@ -3,6 +3,7 @@ package train;
 import java.io.File;
 
 import org.deeplearning4j.datasets.iterator.DataSetIterator;
+import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
@@ -16,33 +17,39 @@ import preprocessing.Word2VecModeler;
 public class Main {
 
 	static int vectorLength = 100;
-	static int numLabels = 2;
+	static int numLabels = 3;
 	static int batchsize = 32;
 	static int maxLength = 100;
+	
+	static String file = "objektart_mit_header.csv";
+	static String result = "soll";
+	static String[] columns = new String[] { 
+			"OBJEKTTYP_FREITEXT", 
+			"OBJTYP_WOHNUNG_TEXT", 
+			"TITEL_FREITEXT", 
+			"BESCHREIBUNG" };
 
 	public static void main(String[] args) throws Exception {
 
-		DatabaseInterface db = new DatabaseInterface(new File("anzart_gesuch_janein_mit_header.csv"),
-				new String[] { "NACHFRAGEART_TEXT", "TITEL_FREITEXT", "BESCHREIBUNG" }, "soll");
+		DatabaseInterface db = new DatabaseInterface(new File(file), columns, result);
 
 		// second instance for testing
-		DatabaseInterface db2 = new DatabaseInterface(new File("anzart_gesuch_janein_mit_header.csv"),
-				new String[] { "NACHFRAGEART_TEXT", "TITEL_FREITEXT", "BESCHREIBUNG" }, "soll");
-
+		DatabaseInterface db2 = new DatabaseInterface(new File(file), columns, result);
+		
 		// create Word2Vec model
-		db.writeSenteceFile(new String[] { "NACHFRAGEART_TEXT", "TITEL_FREITEXT", "BESCHREIBUNG" });
+		db.writeSenteceFile(columns);
 		File f = db.getSentenceFile();
 		Word2VecModeler m = new Word2VecModeler(f);
 		Word2Vec vec = m.getModel();
 
 		// get Data
-		DataSetIterator iteratorTrain = new EntryIterator(db, numLabels, vec, batchsize, maxLength);
-		DataSetIterator iteratorTest = new EntryIterator(db2, numLabels, vec, batchsize, maxLength);
+		DataSetIterator iteratorTrain = new CNNIterator(db, numLabels, vec, batchsize, maxLength);
+		DataSetIterator iteratorTest = new CNNIterator(db2, numLabels, vec, batchsize, maxLength);
 
 		// train and test model
 		int folds = 10;
 		int iterations = 10;
-		int[][][] scores = new int[folds][][];
+		Evaluation evaluation = new Evaluation();
 
 		for (int i = 0; i < folds; i++) {
 			System.out.println("Iteration " + Integer.toString(i + 1));
@@ -55,19 +62,8 @@ public class Main {
 			DataSetIterator kFoldTest = new KFoldIterator(iteratorTest, folds, i, false);
 
 			train(iterations, kFoldTrain, model);
-			scores[i] = test(kFoldTest, model);
-		}
-
-		// print out confusion matrices
-		for (int[][] test : scores) {
-			for (int[] row : test) {
-				for (int value : row) {
-					System.out.print(value);
-					System.out.print(" ");
-				}
-				System.out.println();
-			}
-			System.out.println();
+			testCNN(kFoldTest, model, evaluation);
+			System.out.println(evaluation.stats() + "\n" + evaluation.getConfusionMatrix().toString());
 		}
 	}
 
@@ -78,46 +74,27 @@ public class Main {
 		}
 	}
 
-	/**
-	 * 
-	 * @param iterator
-	 * @param model
-	 * @return confusion matrix for the test
-	 */
-	public static int[][] test(DataSetIterator iterator, MultiLayerNetwork model) {
-		int[][] res = new int[numLabels][];
-		for (int i = 0; i < numLabels; i++) {
-			res[i] = new int[numLabels];
-			for (int j = 0; j < numLabels; j++) {
-				res[i][j] = 0;
-			}
-		}
-		while (iterator.hasNext()) {
-			DataSet d = iterator.next();
-			INDArray out = model.output(d.getFeatureMatrix());
-			INDArray labels = d.getLabels();
-			for (int i = 0; i < out.rows(); i++) {
-				res[getClass(out.getRow(i))][getClass(labels.getRow(i))]++;
-			}
-		}
-		return res;
+	public static void testCNN(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation) {
+        while(iterator.hasNext()){
+            DataSet t = iterator.next();
+            INDArray features = t.getFeatureMatrix();
+            INDArray labels = t.getLabels();
+            INDArray predicted = model.output(features,false);
+
+            evaluation.eval(labels,predicted);
+        }
 	}
 	
-	/**
-	 * 
-	 * @param vector of the activations for the classes
-	 * @return class index
-	 */
-	public static int getClass(INDArray vector) {
-		int r = 0;
-		double max = 0;
-		for (int i = 0; i < vector.length(); i++) {
-			if (vector.getDouble(i) > max) {
-				max = vector.getDouble(i);
-				r = i;
-			}
-		}
-		return r;
-	}
+	public static void testLSTM(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation) {
+        while(iterator.hasNext()){
+            DataSet t = iterator.next();
+            INDArray features = t.getFeatureMatrix();
+            INDArray lables = t.getLabels();
+            INDArray inMask = t.getFeaturesMaskArray();
+            INDArray outMask = t.getLabelsMaskArray();
+            INDArray predicted = model.output(features,false,inMask,outMask);
 
+            evaluation.evalTimeSeries(lables,predicted,outMask);
+        }
+	}
 }
