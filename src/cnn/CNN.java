@@ -11,8 +11,7 @@ import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
 import org.deeplearning4j.nn.conf.layers.setup.ConvolutionLayerSetup;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
-import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
-import org.nd4j.linalg.lossfunctions.LossFunctions;
+import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 
 public class CNN {
 	
@@ -39,23 +38,23 @@ public class CNN {
                         .nOut(64)
                         .activation("identity")
                         .build())
-                .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
-                        .kernelSize(2,1)
-                        .stride(2,1)
+//                .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
+//                        .kernelSize(2,1)
+//                        .stride(2,1)
+//                        .build())
+                .layer(1, new ConvolutionLayer.Builder(5, 1)
+                        .nIn(nChannels)
+                        .stride(1, 1)
+                        .nOut(64)
+                        .activation("identity")
                         .build())
-//                .layer(2, new ConvolutionLayer.Builder(5, vectorLength / 2)
-//                        .nIn(nChannels)
-//                        .stride(1, 1)
-//                        .nOut(64)
-//                        .activation("identity")
-//                        .build())
-//                .layer(3, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
-//                        .kernelSize(2,2)
-//                        .stride(2,2)
-//                        .build())
-                .layer(2, new DenseLayer.Builder().activation("relu")
+                .layer(2, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
+                        .kernelSize(2,1)
+                        .stride(1,1)
+                        .build())
+                .layer(3, new DenseLayer.Builder().activation("relu")
                         .nOut(500).build())
-                .layer(3, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
+                .layer(4, new OutputLayer.Builder(LossFunction.NEGATIVELOGLIKELIHOOD)
                         .nOut(numClasses)
                         .activation("softmax")
                         .build())
@@ -65,7 +64,7 @@ public class CNN {
         MultiLayerConfiguration conf = builder.build();
         model = new MultiLayerNetwork(conf);
         model.init();
-        model.setListeners(new ScoreIterationListener(100));
+        System.out.println(model.toString());
 	}
 	
 	public MultiLayerNetwork getModel(){
