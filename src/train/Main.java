@@ -10,42 +10,54 @@ import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.ui.weights.HistogramIterationListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import cnn.CNN;
+import lstm.LSTM;
 import preprocessing.DatabaseInterface;
 import preprocessing.Word2VecModeler;
 
 public class Main {
 
-	static int vectorLength = 100;
-	static int numLabels = 3;
-	static int batchsize = 32;
-	static int maxLength = 100;
-	
-	static String file = "objektart_mit_header.csv";
-	static String labelColumn = "soll";
-	static String[] columns = new String[] { 
+	static final int VECTOR_LENGTH = 300;
+	static final int NUM_LABELS = 3;
+	static final int BATCHSIZE = 32;
+	static final int MAX_LENGTH = 300;
+
+	static final String FILE = "objektart_mit_header_ZUF_und_OP.csv";
+	static final String LABEL_COLUMN = "soll";
+	static final String[] COLUMNS = new String[] { 
+			"BREADCRUMP",
 			"OBJEKTTYP_FREITEXT", 
 			"OBJTYP_WOHNUNG_TEXT", 
 			"TITEL_FREITEXT", 
 			"BESCHREIBUNG" };
+	
+//	static final String FILE = "anzart_gesuch_janein_mit_header_ZUF_und_OP.csv";
+//	static final String LABEL_COLUMN = "soll";
+//	static final String[] COLUMNS = new String[] { 
+//			"BREADCRUMP", 
+//			"NACHFRAGEART_TEXT", 
+//			"TITEL_FREITEXT", 
+//			"BESCHREIBUNG" };
 
 	public static void main(String[] args) throws Exception {
 
-		DatabaseInterface db = new DatabaseInterface(new File(file), columns, labelColumn);
+		DatabaseInterface db = new DatabaseInterface(new File(FILE), COLUMNS, LABEL_COLUMN);
 
 		// second instance for testing
-		DatabaseInterface db2 = new DatabaseInterface(new File(file), columns, labelColumn);
+		DatabaseInterface db2 = new DatabaseInterface(new File(FILE), COLUMNS, LABEL_COLUMN);
 		
 		// create Word2Vec model
-		db.writeSenteceFile(columns);
+		db.writeSenteceFile(COLUMNS);
 		File f = db.getSentenceFile();
-		Word2VecModeler m = new Word2VecModeler(f);
+		Word2VecModeler m = new Word2VecModeler(f, VECTOR_LENGTH);
 		Word2Vec vec = m.getModel();
 
 		// get Data
-		DataSetIterator iteratorTrain = new CNNIterator(db, numLabels, vec, batchsize, maxLength);
-		DataSetIterator iteratorTest = new CNNIterator(db2, numLabels, vec, batchsize, maxLength);
+		DataSetIterator iteratorTrain = new LSTMIterator(db, NUM_LABELS, vec, BATCHSIZE, MAX_LENGTH);
+		DataSetIterator iteratorTest = new LSTMIterator(db2, NUM_LABELS, vec, BATCHSIZE, MAX_LENGTH);
 
 		// train and test model
 		int folds = 10;
@@ -56,14 +68,14 @@ public class Main {
 			System.out.println("Iteration " + Integer.toString(i + 1));
 			
 			// create Network
-			CNN builder = new CNN(numLabels, vectorLength, maxLength);
+			LSTM builder = new LSTM(NUM_LABELS, VECTOR_LENGTH, MAX_LENGTH);
 			MultiLayerNetwork model = builder.getModel();
 
 			DataSetIterator kFoldTrain = new KFoldIterator(iteratorTrain, folds, i, true);
 			DataSetIterator kFoldTest = new KFoldIterator(iteratorTest, folds, i, false);
 
 			train(iterations, kFoldTrain, model);
-			testCNN(kFoldTest, model, evaluation, i);
+			testLSTM(kFoldTest, model, evaluation, i);
 			System.out.println(evaluation.stats() + "\n" + evaluation.getConfusionMatrix().toString());
 		}
 	}
@@ -77,9 +89,14 @@ public class Main {
 	}
 
 	public static void testCNN(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation, int fold) {
-		int test = iterator.totalExamples() * fold;
-        while(iterator.hasNext()){
+		boolean set = false;
+		int test = 0;
+		while(iterator.hasNext()){
             DataSet t = iterator.next();
+            if (!set) {
+            	test = iterator.cursor();
+            	set = true;
+            }
             INDArray features = t.getFeatureMatrix();
             INDArray labels = t.getLabels();
             INDArray predicted = model.output(features,false);
@@ -94,16 +111,48 @@ public class Main {
         }
 	}
 	
-	public static void testLSTM(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation) {
-        while(iterator.hasNext()){
+	public static void testLSTM(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation, int fold) {
+		boolean set = false;
+		int test = 0;
+		while(iterator.hasNext()){
             DataSet t = iterator.next();
+            if (!set) {
+            	test = iterator.cursor();
+            	set = true;
+            }
             INDArray features = t.getFeatureMatrix();
-            INDArray lables = t.getLabels();
+            INDArray labels = t.getLabels();
             INDArray inMask = t.getFeaturesMaskArray();
             INDArray outMask = t.getLabelsMaskArray();
             INDArray predicted = model.output(features,false,inMask,outMask);
+            
+            int totalOutputExamples = outMask.sumNumber().intValue();
+            int outSize = labels.size(1);
 
-            evaluation.evalTimeSeries(lables,predicted,outMask);
+            INDArray labels2d = Nd4j.create(totalOutputExamples, outSize);
+            INDArray predicted2d = Nd4j.create(totalOutputExamples, outSize);
+
+            int rowCount = 0;
+            for (int ex = 0; ex < outMask.size(0); ex++) {
+                for (int i = 0; i < outMask.size(1); i++) {
+                    if (outMask.getDouble(ex, i) == 0.0) continue;
+
+                    labels2d.putRow(rowCount, labels.get(NDArrayIndex.point(ex), NDArrayIndex.all(), NDArrayIndex.point(i)));
+                    predicted2d.putRow(rowCount, predicted.get(NDArrayIndex.point(ex), NDArrayIndex.all(), NDArrayIndex.point(i)));
+
+                    rowCount++;
+                }
+            }
+            
+            for (int i = 0; i < labels2d.rows(); i++){
+            	if (getLabel(labels2d.getRow(i)) != getLabel(predicted2d.getRow(i)))
+            		System.out.println((test+2) + ": " 
+            				+ getLabel(labels2d.getRow(i)) + " " 
+            				+ getLabel(predicted2d.getRow(i)));
+            	test++;
+            }
+            
+            evaluation.evalTimeSeries(labels,predicted,outMask);
         }
 	}
 	

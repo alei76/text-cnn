@@ -13,7 +13,7 @@ import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 public class Word2VecModeler {
 	private Word2Vec vec;
 
-	public Word2VecModeler(File f) throws Exception {
+	public Word2VecModeler(File f, int vectorLength) throws Exception {
 		// Strip white space before and after for each line
 		SentenceIterator iter = new BasicLineIterator(f);
 		// Split on white spaces in the line to get words
@@ -23,7 +23,7 @@ public class Word2VecModeler {
 		vec = new Word2Vec.Builder()
 				.minWordFrequency(5)
 				.iterations(1)
-				.layerSize(100)
+				.layerSize(vectorLength)
 				.seed(42)
 				.windowSize(5)
 				.iterate(iter)
@@ -33,8 +33,8 @@ public class Word2VecModeler {
 		vec.fit();
 	}
 
-	public Word2VecModeler(File f, String saveModel) throws Exception {
-		this(f);
+	public Word2VecModeler(File f, int vectorLength, String saveModel) throws Exception {
+		this(f, vectorLength);
 
 		// Write word vectors
 		WordVectorSerializer.writeWordVectors(vec, saveModel);
