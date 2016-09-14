@@ -48,36 +48,4 @@ public class LSTM {
 	public MultiLayerNetwork getModel(){
 		return model;
 	}
-
-//    //DataSetIterators for training and testing respectively
-//    //Using AsyncDataSetIterator to do data loading in a separate thread; this may improve performance vs. waiting for data to load
-//    WordVectors wordVectors = WordVectorSerializer.loadGoogleModel(new File(WORD_VECTORS_PATH), true, false);
-//    DataSetIterator train = new AsyncDataSetIterator(new SentimentExampleIterator(DATA_PATH,wordVectors,batchSize,truncateReviewsToLength,true),1);
-//    DataSetIterator test = new AsyncDataSetIterator(new SentimentExampleIterator(DATA_PATH,wordVectors,100,truncateReviewsToLength,false),1);
-//
-//    System.out.println("Starting training");
-//    for( int i=0; i<nEpochs; i++ ){
-//        net.fit(train);
-//        train.reset();
-//        System.out.println("Epoch " + i + " complete. Starting evaluation:");
-//
-//        //Run evaluation. This is on 25k reviews, so can take some time
-//        Evaluation evaluation = new Evaluation();
-//        while(test.hasNext()){
-//            DataSet t = test.next();
-//            INDArray features = t.getFeatureMatrix();
-//            INDArray lables = t.getLabels();
-//            INDArray inMask = t.getFeaturesMaskArray();
-//            INDArray outMask = t.getLabelsMaskArray();
-//            INDArray predicted = net.output(features,false,inMask,outMask);
-//
-//            evaluation.evalTimeSeries(lables,predicted,outMask);
-//        }
-//        test.reset();
-//
-//        System.out.println(evaluation.stats());
-//    }
-//
-//
-//    System.out.println("----- Example complete -----");
 }

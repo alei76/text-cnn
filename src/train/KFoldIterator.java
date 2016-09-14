@@ -80,7 +80,7 @@ public class KFoldIterator implements DataSetIterator {
 
 	@Override
 	public int cursor() {
-		return cursor();
+		return cursor;
 	}
 
 	@Override

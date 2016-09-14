@@ -21,27 +21,29 @@ import preprocessing.Word2VecModeler;
 public class Main {
 
 	static final int VECTOR_LENGTH = 300;
-	static final int NUM_LABELS = 3;
+	static final int NUM_LABELS = 2;
 	static final int BATCHSIZE = 32;
 	static final int MAX_LENGTH = 300;
-
-	static final String FILE = "objektart_mit_header_ZUF_und_OP.csv";
+	
+	// T1 dataset
+	static final String FILE = "anzart_gesuch_janein_mit_header_ZUF_und_OP.csv";
 	static final String LABEL_COLUMN = "soll";
 	static final String[] COLUMNS = new String[] { 
-			"BREADCRUMP",
-			"OBJEKTTYP_FREITEXT", 
-			"OBJTYP_WOHNUNG_TEXT", 
+			"BREADCRUMP", 
+			"NACHFRAGEART_TEXT", 
 			"TITEL_FREITEXT", 
 			"BESCHREIBUNG" };
-	
-//	static final String FILE = "anzart_gesuch_janein_mit_header_ZUF_und_OP.csv";
+
+	// T2 dataset
+//	static final String FILE = "objektart_mit_header_ZUF_und_OP.csv";
 //	static final String LABEL_COLUMN = "soll";
 //	static final String[] COLUMNS = new String[] { 
-//			"BREADCRUMP", 
-//			"NACHFRAGEART_TEXT", 
+//			"BREADCRUMP",
+//			"OBJEKTTYP_FREITEXT", 
+//			"OBJTYP_WOHNUNG_TEXT", 
 //			"TITEL_FREITEXT", 
 //			"BESCHREIBUNG" };
-
+	
 	public static void main(String[] args) throws Exception {
 
 		DatabaseInterface db = new DatabaseInterface(new File(FILE), COLUMNS, LABEL_COLUMN);
@@ -62,9 +64,9 @@ public class Main {
 		// train and test model
 		int folds = 10;
 		int iterations = 10;
-		Evaluation evaluation = new Evaluation();
 
 		for (int i = 0; i < folds; i++) {
+			Evaluation evaluation = new Evaluation();
 			System.out.println("Iteration " + Integer.toString(i + 1));
 			
 			// create Network
@@ -75,20 +77,20 @@ public class Main {
 			DataSetIterator kFoldTest = new KFoldIterator(iteratorTest, folds, i, false);
 
 			train(iterations, kFoldTrain, model);
-			testLSTM(kFoldTest, model, evaluation, i);
+			testLSTM(kFoldTest, model, evaluation);
 			System.out.println(evaluation.stats() + "\n" + evaluation.getConfusionMatrix().toString());
 		}
 	}
 
 	public static void train(int nEpochs, DataSetIterator iterator, MultiLayerNetwork model) {
 		model.setListeners(new ScoreIterationListener(100));
-//        model.setListeners(new HistogramIterationListener(1));
+//      model.setListeners(new HistogramIterationListener(1));
 		for (int i = 0; i < nEpochs; i++) {
 			model.fit(iterator);
 		}
 	}
 
-	public static void testCNN(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation, int fold) {
+	public static void testCNN(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation) {
 		boolean set = false;
 		int test = 0;
 		while(iterator.hasNext()){
@@ -100,6 +102,8 @@ public class Main {
             INDArray features = t.getFeatureMatrix();
             INDArray labels = t.getLabels();
             INDArray predicted = model.output(features,false);
+            
+            // outputs wrongly predicted ads
             for (int i = 0; i < labels.rows(); i++){
             	if (getLabel(labels.getRow(i)) != getLabel(predicted.getRow(i)))
             		System.out.println((test+2) + ": " 
@@ -107,11 +111,12 @@ public class Main {
             				+ getLabel(predicted.getRow(i)));
             	test++;
             }
+            
             evaluation.eval(labels,predicted);
         }
 	}
 	
-	public static void testLSTM(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation, int fold) {
+	public static void testLSTM(DataSetIterator iterator, MultiLayerNetwork model, Evaluation evaluation) {
 		boolean set = false;
 		int test = 0;
 		while(iterator.hasNext()){
@@ -129,6 +134,7 @@ public class Main {
             int totalOutputExamples = outMask.sumNumber().intValue();
             int outSize = labels.size(1);
 
+            // outputs wrongly predicted ads
             INDArray labels2d = Nd4j.create(totalOutputExamples, outSize);
             INDArray predicted2d = Nd4j.create(totalOutputExamples, outSize);
 
@@ -156,6 +162,11 @@ public class Main {
         }
 	}
 	
+	/**
+	 * Gets predicted label from output; only works for cnn and for 2d-ized lstm outputs
+	 * @param labels
+	 * @return predicted label
+	 */
 	public static int getLabel(INDArray labels){
 		int r = 0;
 		double max = 0;

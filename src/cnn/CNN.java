@@ -49,7 +49,7 @@ public class CNN {
                         .activation("identity")
                         .build())
                 .layer(2, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
-                        .kernelSize(2,1)
+                        .kernelSize(textLength - 14,1)
                         .stride(1,1)
                         .build())
                 .layer(3, new DenseLayer.Builder().activation("relu")
